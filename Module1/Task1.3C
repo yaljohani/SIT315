@@ -1,0 +1,33 @@
+const byte led_pin = 13;
+const byte interrupt_pin1 = 2;
+const byte interrupt_pin2 = 3;
+volatile byte status = LOW;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(led_pin,OUTPUT);
+  attachInterrupt(digitalPinToInterrupt(interrupt_pin1),interrupt_routine1,RISING);
+  attachInterrupt(digitalPinToInterrupt(interrupt_pin2),interrupt_routine2,RISING);
+
+}
+
+void loop() {
+  if (status==HIGH){
+    digitalWrite(led_pin,HIGH);
+    delay(1000);
+    
+  }
+  if (status==HIGH) {
+    Serial.println("reset");
+    status = LOW;
+    digitalWrite(led_pin,LOW);
+  }
+}
+
+void interrupt_routine1(){status = HIGH;
+  Serial.println("PIR Detect");
+}
+void interrupt_routine2(){status = HIGH;
+  Serial.println("Switch Detect");
+}
+
