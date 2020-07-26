@@ -1,0 +1,111 @@
+#include<avr/io.h>
+#include<avr/interrupt.h>
+#define ONE 1
+int Switch_on=0, Switch_off=0;
+const byte led = 13;
+const byte led_trg = 12;
+
+const byte interrupt_pin1 = 2;
+volatile byte state = LOW;
+int timer1_counter;
+void init();
+void intr_sw();
+
+void setup() 
+  {
+Serial.begin(9600);
+  pinMode(led,OUTPUT);
+  pinMode(led_trg,OUTPUT);
+  attachInterrupt(digitalPinToInterrupt(interrupt_pin1),interrupt_routine1,RISING);
+  
+  // initialize timer1 
+  noInterrupts();           // disable all interrupts
+  TCCR1A = 0;
+  TCCR1B = 0;
+  timer1_counter = 34286;  
+  
+  TCNT1 = timer1_counter;   // preload timer
+  TCCR1B |= (1 << CS12);    // 256 prescaler 
+  TIMSK1 |= (1 << TOIE1);   // enable timer overflow interrupt
+  interrupts();             // enable all interrupts
+}
+ISR(TIMER1_OVF_vect)        // interrupt service routine 
+{
+  TCNT1 = timer1_counter;   // preload timer
+  digitalWrite(led, digitalRead(led) ^ 1);
+  Serial.println("Timer Interrupt");
+}
+
+
+void loop() {
+  
+  if (state==HIGH){
+    digitalWrite(led_trg,HIGH);
+    
+  }
+  if (state==HIGH) {
+    state = LOW;
+    digitalWrite(led_trg,LOW);
+  }
+}
+
+void interrupt_routine1(){state = HIGH;
+  Serial.println("PIR Interrupt");
+}
+
+
+
+
+int main()
+{
+   setup();
+  SREG |=(ONE<<PD7); // Enabling global interrupt
+  intr_sw();
+ interrupts();
+  while (1){
+       loop();
+    if(Switch_on && !Switch_off)
+    {
+      PORTC |=(ONE<<PC3); //LED on
+    }
+    else if(Switch_off && !Switch_on)
+    {
+      PORTC &=~(ONE<<PC3); // LED off
+    }
+    
+ }
+  return 0;
+}
+
+void init()
+{
+  DDRD &=~(ONE<<PD5); // Switch 2
+  DDRB&=~(ONE<<PB2); // Switch 1
+  DDRC |=(ONE<<PC3); // LED as OUTPUT
+  PORTB &=~(ONE<<PB2);
+  PORTD &=~(ONE<<PB5);
+  PORTC &=~(ONE<<PC3); // LED off
+  }
+  
+void intr_sw()
+{
+  PCICR |=(ONE<<PCIE2);
+  PCMSK2|=(ONE<<PCINT21); // Enabling Interrupt on PD5
+  PCICR |=(ONE<<PCIE0);
+  PCMSK0|=(ONE<<PCINT2); // Enabling Interrupt on PDB2
+}
+
+ISR(PCINT0_vect)
+  {
+  Serial.println("interrupt 1");
+  Switch_on=1;
+  Switch_off=0;
+}
+
+ISR(PCINT2_vect) 
+{
+ Serial.println("interrupt 2");
+  Switch_off=1;
+  Switch_on=0;
+}
+  
